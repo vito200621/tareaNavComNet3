@@ -1,70 +1,95 @@
-import Link from 'next/link'
+'use client';
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState, type FormEvent } from 'react';
+import { loginUser } from '@/src/features/auth/presentation/state/actions';
+import { TextField } from '@/src/shared/presentation/components/TextField';
+import { useAppDispatch, useAppSelector } from '@/src/store/StoreProvider';
+
+const validEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
 export default function LoginPage() {
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { status, error } = useAppSelector((state) => state.auth);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const [touched, setTouched] = useState({ email: false, password: false });
+  const emailError = (submitted || touched.email)
+    ? !email.trim() ? 'Ingresa tu correo.' : !validEmail(email) ? 'Ingresa un correo válido.' : undefined
+    : undefined;
+  const passwordError = (submitted || touched.password)
+    ? password.length < 8 ? 'La contraseña debe tener al menos 8 caracteres.' : undefined
+    : undefined;
+  const isLoading = status === 'loading';
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitted(true);
+    if (!validEmail(email) || password.length < 8) return;
+
+    try {
+      await dispatch(loginUser({ email, password }));
+      router.replace('/routines');
+    } catch {
+      return;
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-[#f3f4f6] flex items-center justify-center p-4">
-      {/* Tarjeta con sombra suave y bordes redondeados exactos */}
-      <div className="w-full max-w-[420px] bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-        
-        {/* Título y Subtítulo */}
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-semibold text-gray-900 tracking-tight mb-2">
-            GymRoutines
-          </h1>
-          <p className="text-gray-500 text-sm font-normal">
-            Inicia sesión para ver tus rutinas
+    <main className="grid min-h-[calc(100vh-4rem)] place-items-center bg-base-200 p-4">
+      <section className="card w-full max-w-md border border-base-300 bg-base-100 shadow-xl">
+        <div className="card-body gap-5 p-6 sm:p-8">
+          <div className="space-y-1 text-center">
+            <h1 className="card-title justify-center text-3xl">Bienvenido</h1>
+            <p className="text-base-content/70">Inicia sesión para ver tus rutinas</p>
+          </div>
+
+          <form className="space-y-3" noValidate onSubmit={handleSubmit}>
+            <TextField
+              id="email"
+              label="Correo"
+              type="email"
+              autoComplete="email"
+              placeholder="tu@correo.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              onBlur={() => setTouched((current) => ({ ...current, email: true }))}
+              required
+              maxLength={254}
+              error={emailError}
+            />
+            <TextField
+              id="password"
+              label="Contraseña"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Mínimo 8 caracteres"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              onBlur={() => setTouched((current) => ({ ...current, password: true }))}
+              required
+              minLength={8}
+              maxLength={128}
+              error={passwordError}
+            />
+
+            {error && <div role="alert" className="alert alert-error py-3 text-sm">{error}</div>}
+
+            <button type="submit" className="btn btn-primary btn-block" disabled={isLoading}>
+              {isLoading ? <span className="loading loading-spinner loading-sm" aria-hidden="true" /> : null}
+              {isLoading ? 'Ingresando…' : 'Iniciar sesión'}
+            </button>
+          </form>
+
+          <p className="text-center text-sm">
+            ¿No tienes cuenta?{' '}
+            <Link href="/register" className="link link-primary font-medium">Regístrate</Link>
           </p>
         </div>
-
-        {/* Formulario */}
-        <form className="space-y-5" noValidate>
-          
-          {/* Campo Correo */}
-          <div>
-            <label className="block text-xs font-bold text-gray-900 mb-2">
-              Correo
-            </label>
-            <input
-              type="email"
-              placeholder="tu@correo.com"
-              className="w-full px-3.5 py-2.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-400"
-              required
-            />
-          </div>
-
-          {/* Campo Contraseña */}
-          <div>
-            <label className="block text-xs font-bold text-gray-900 mb-2">
-              Contraseña
-            </label>
-            <input
-              type="password"
-              placeholder="****"
-              className="w-full px-3.5 py-2.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-400"
-              required
-            />
-          </div>
-
-          {/* Botón Principal (Primary DaisyUI Color) */}
-          <button
-            type="submit"
-            className="w-full py-3 px-4 bg-[#4f46e5] hover:bg-[#4338ca] text-white font-medium text-sm rounded-lg transition-colors duration-150 shadow-sm mt-2"
-          >
-            Iniciar sesión
-          </button>
-
-          {/* Enlace de Registro */}
-          <div className="text-center pt-2">
-            <p className="text-sm text-gray-900">
-              ¿No tienes cuenta?{' '}
-              <Link href="/register" className="text-[#4f46e5] underline font-normal hover:text-[#4338ca]">
-                Regístrate
-              </Link>
-            </p>
-          </div>
-
-        </form>
-      </div>
-    </div>
-  )
+      </section>
+    </main>
+  );
 }
